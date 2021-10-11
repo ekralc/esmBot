@@ -4,6 +4,49 @@ import { log, error as _error } from "../utils/logger.js";
 import { prefixCache, aliases, disabledCache, disabledCmdCache, commands } from "../utils/collections.js";
 import parseCommand from "../utils/parseCommand.js";
 import { clean } from "../utils/misc.js";
+import fetch from "node-fetch";
+import FormData from "form-data";
+
+const uploadToServer = async file => {  
+  const uploadKey = process.env.UPLOAD_SYSTEMS_KEY;
+  const form = new FormData();
+  
+  if (uploadKey == "") {
+    return "";
+  }
+
+  form.append("file", file, {
+    contentType: "image/gif",
+    name: "file",
+    filename: "image.gif",
+  });
+
+  form.append("key", uploadKey);
+
+  log("info", file);
+  const response = await fetch("https://api.upload.systems/images/upload", {
+    method: "POST",
+    body: form,
+  });
+
+  const text = await response.text();
+  log("info", text);
+
+  if (response.ok) {
+    try {
+      const data = JSON.parse(text);
+      return data.cdnUrl;
+    } catch {
+      log("error", `Couldn't deserialise response from upload server ${text}`);
+      return "";
+    }
+  } else {
+    log("error", `Request failed ${response.status}`);
+    log("error", text);
+
+    return "";
+  }
+};
 
 // run when someone sends a message
 export default async (client, cluster, worker, ipc, message) => {
@@ -114,9 +157,17 @@ export default async (client, cluster, worker, ipc, message) => {
       await client.createMessage(message.channel.id, Object.assign(result, reference));
     } else if (typeof result === "object" && result.file) {
       if (result.file.length > 8388119 && process.env.TEMPDIR !== "") {
-        const filename = `${Math.random().toString(36).substring(2, 15)}.${result.name.split(".")[1]}`;
-        await promises.writeFile(`${process.env.TEMPDIR}/${filename}`, result.file);
-        const imageURL = `${process.env.TMP_DOMAIN == "" ? "https://tmp.projectlounge.pw" : process.env.TMP_DOMAIN}/${filename}`;
+        const imageURL = await uploadToServer(result.file);
+        if (imageURL == "") {
+          await client.createMessage(message.channel.id, Object.assign({
+            embed: {
+              color: 16711680,
+              title: "Upload failed",
+              content: "The image was larger than 8MB and had to be uploaded to an external service, but this failed."
+            }
+          }, reference));
+        }
+
         await client.createMessage(message.channel.id, Object.assign({
           embed: {
             color: 16711680,

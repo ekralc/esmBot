@@ -32,6 +32,7 @@
     "eris": "github:abalabahaha/eris#dev",
     "eris-fleet": "github:esmBot/eris-fleet",
     "file-type": "^16.1.0",
+    "form-data": "^4.0.0",
     "format-duration": "^1.4.0",
     "lavacord": "^1.1.9",
     "node-addon-api": "^3.2.1",
