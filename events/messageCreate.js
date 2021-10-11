@@ -1,4 +1,3 @@
-import { promises } from "fs";
 import database from "../utils/database.js";
 import { log, error as _error } from "../utils/logger.js";
 import { prefixCache, aliases, disabledCache, disabledCmdCache, commands } from "../utils/collections.js";
@@ -23,7 +22,6 @@ const uploadToServer = async file => {
 
   form.append("key", uploadKey);
 
-  log("info", file);
   const response = await fetch("https://api.upload.systems/images/upload", {
     method: "POST",
     body: form,
